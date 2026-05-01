@@ -1,4 +1,4 @@
-# GePS---Governement-e-Procurement-System
+# GePS-Governement-e-Procurement-System
 AI for Bharath 2 Hackathon Challenge. An e-procurement system that utilizes aritificial intelligence to automate bidder evaluation for procurement process
 The intelligent e-Procurement System that harnesses the power of AI to bring efficiency, transparency, and scalability to government tender evaluations. By transforming how eligibility is assessed, our system aims to replace manual, error-prone processes with structured, explainable, and auditable decision-making—without removing human judgment from the loop.
 
