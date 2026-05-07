@@ -1,0 +1,130 @@
+{
+  "rules": [
+    {
+      "rule_id": "R1",
+      "rule_type": "deterministic",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "eligibility_criterion",
+        "operator": "text",
+        "value": "The selected bidder shall provide installation, integration, maintenance, and support services for a period of 3 years.",
+        "unit": null,
+        "time_period": null
+      },
+      "confidence": 0.88,
+      "original_text": "The selected bidder shall provide installation, integration, maintenance, and support services for a period of 3 years.",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R2",
+      "rule_type": "deterministic",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "experience_years",
+        "operator": ">=",
+        "value": 5,
+        "unit": "projects",
+        "time_period": null
+      },
+      "confidence": 0.88,
+      "original_text": "Eligibility Criteria Bidder must have minimum 5 years of experience in surveillance or smart city projects.",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R3",
+      "rule_type": "deterministic",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "eligibility_criterion",
+        "operator": ">=",
+        "value": 50000000,
+        "unit": "INR",
+        "time_period": "last_5_years"
+      },
+      "confidence": 0.88,
+      "original_text": "Bidder must have completed at least 3 projects above INR 5 Crore in the last 5 years.",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R4",
+      "rule_type": "deterministic",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "average_turnover",
+        "operator": ">=",
+        "value": 200000000,
+        "unit": "INR",
+        "time_period": "last_3_financial_years"
+      },
+      "confidence": 0.88,
+      "original_text": "Average annual turnover for the last 3 financial years should exceed INR 20 Crore.",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R5",
+      "rule_type": "boolean",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "gst_registration",
+        "operator": "required",
+        "value": true,
+        "unit": null,
+        "time_period": null
+      },
+      "confidence": 0.8,
+      "original_text": "Bidder must possess valid GST registration, PAN, and ISO 27001 certification.",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R6",
+      "rule_type": "boolean",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "experience_years",
+        "operator": "required",
+        "value": true,
+        "unit": null,
+        "time_period": null
+      },
+      "confidence": 0.8,
+      "original_text": "Required Supporting Documents Company Registration Certificate GST Registration PAN Card Audited Financial Statements for FY 2022-23, FY 2023-24, FY 2024-25 Experience Certificates / Work Orders ISO Certifications Self-declaration regarding non-blacklisting",
+      "source_page": 1,
+      "status": "extracted"
+    },
+    {
+      "rule_id": "R7",
+      "rule_type": "deterministic",
+      "category": "mandatory",
+      "priority": 1,
+      "dependencies": null,
+      "rule_definition": {
+        "field": "eligibility_criterion",
+        "operator": "text",
+        "value": "Submission Instructions All bids must be submitted electronically before 5:00 PM on 30 June 2026.",
+        "unit": null,
+        "time_period": null
+      },
+      "confidence": 0.88,
+      "original_text": "Submission Instructions All bids must be submitted electronically before 5:00 PM on 30 June 2026.",
+      "source_page": 2,
+      "status": "extracted"
+    }
+  ]
+}
