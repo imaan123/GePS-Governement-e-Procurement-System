@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 
 
 @dataclass
@@ -8,8 +8,10 @@ class Rule:
     rule_type: str
     category: str
     priority: int
-    dependencies: Optional[List[str]]
+    dependencies: Optional[Dict[str, Any]]
     rule_definition: Dict
     confidence: float
+    source_page: Optional[int] = None
+    source_section: Optional[str] = None
     original_text: Optional[str] = None
     

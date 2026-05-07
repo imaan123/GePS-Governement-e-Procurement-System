@@ -21,6 +21,8 @@ def init_tables():
             dependencies JSONB,
             rule_definition JSONB,
             original_text TEXT,
+            source_page INT,
+            source_section TEXT,
             confidence FLOAT
         )
         """))
@@ -65,6 +67,8 @@ class DBManager:
                 dependencies,
                 rule_definition,
                 original_text,
+                source_page,
+                source_section,
                 confidence
             FROM rules
             ORDER BY priority ASC
@@ -84,6 +88,8 @@ class DBManager:
                 dependencies=row.dependencies,
                 rule_definition=row.rule_definition,
                 original_text=row.original_text,
+                source_page=row.source_page,
+                source_section=row.source_section,
                 confidence=row.confidence
             )
 
