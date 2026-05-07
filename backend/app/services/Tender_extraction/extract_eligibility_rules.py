@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from database.db import DBManager, init_tables
 
 # ── config ────────────────────────────────────────────────────────────────────
 INPUT_JSON = "tender_extracted.json"
@@ -314,10 +315,34 @@ Rules:
 
 
 def _call_llm(text_chunk: str) -> List[Dict[str, Any]]:
+    # Prefer local model client if available
+    try:
+        from llm.model_client import QwenClient
+    except Exception:
+        QwenClient = None
+
+    # If local client exists, use it (expects a simple generate(prompt) -> str API)
+    if QwenClient is not None:
+        client = QwenClient(model=LLM_MODEL, mode="private")
+        prompt = SYSTEM_PROMPT + "\n\n" + text_chunk
+        for attempt in range(3):
+            try:
+                resp_text = client.generate(prompt)
+                content = re.sub(r"^```(?:json)?\s*|\s*```$", "", (resp_text or "{}").strip())
+                return json.loads(content).get("rules", [])
+            except json.JSONDecodeError as e:
+                print(f"  [LLM-local] JSON parse error (attempt {attempt + 1}): {e}")
+                time.sleep(2)
+            except Exception as e:
+                print(f"  [LLM-local] Error (attempt {attempt + 1}): {e}")
+                time.sleep(3)
+
+    # Fallback to OpenAI/OpenRouter style client
     try:
         from openai import OpenAI
     except ImportError:
-        raise RuntimeError("Run: pip install openai")
+        print("  [LLM] OpenAI client not available and no local model client found.")
+        return []
 
     client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
 
@@ -445,79 +470,14 @@ def merge_and_dedup(llm_rules: List[Dict], rb_rules: List[Dict]) -> List[Dict]:
 # ── database upload ───────────────────────────────────────────────────────────
 
 def upload_rules_to_db(rules: List[Dict[str, Any]], db_url: str = "postgresql://postgres:password@localhost:5432/db") -> None:
-    """
-    Upload extracted eligibility rules to the PostgreSQL `rules` table.
-    Creates the table if it does not exist.
-    """
+    """Legacy wrapper that now delegates to DBManager."""
+    init_tables()
+    manager = DBManager()
     try:
-        from sqlalchemy import create_engine, text as sa_text
-    except ImportError:
-        raise RuntimeError("Run: pip install sqlalchemy psycopg2-binary")
-
-    engine = create_engine(db_url)
-
-    with engine.begin() as conn:
-        conn.execute(sa_text("""
-            CREATE TABLE IF NOT EXISTS rules (
-                rule_id TEXT PRIMARY KEY,
-                rule_type TEXT,
-                category TEXT,
-                priority INT,
-                dependencies JSONB,
-                rule_definition JSONB,
-                original_text TEXT,
-                source_page INT,
-                source_section TEXT,
-                confidence FLOAT
-            )
-        """))
-
-    insert_sql = sa_text("""
-        INSERT INTO rules (
-            rule_id, rule_type, category, priority,
-            dependencies, rule_definition, original_text,
-            source_page, source_section, confidence
-        ) VALUES (
-            :rule_id, :rule_type, :category, :priority,
-            :dependencies, :rule_definition, :original_text,
-            :source_page, :source_section, :confidence
-        )
-        ON CONFLICT (rule_id) DO UPDATE SET
-            rule_type       = EXCLUDED.rule_type,
-            category        = EXCLUDED.category,
-            priority        = EXCLUDED.priority,
-            dependencies    = EXCLUDED.dependencies,
-            rule_definition = EXCLUDED.rule_definition,
-            original_text   = EXCLUDED.original_text,
-            source_page     = EXCLUDED.source_page,
-            source_section  = EXCLUDED.source_section,
-            confidence      = EXCLUDED.confidence
-    """)
-
-    uploaded = 0
-    skipped = 0
-
-    with engine.begin() as conn:
-        for rule in rules:
-            try:
-                conn.execute(insert_sql, {
-                    "rule_id":         rule.get("rule_id"),
-                    "rule_type":       rule.get("rule_type"),
-                    "category":        rule.get("category"),
-                    "priority":        rule.get("priority"),
-                    "dependencies":    json.dumps(rule.get("dependencies")) if rule.get("dependencies") is not None else None,
-                    "rule_definition": json.dumps(rule.get("rule_definition")),
-                    "original_text":   rule.get("original_text"),
-                    "source_page":     rule.get("source_page"),
-                    "source_section":  rule.get("source_section"),
-                    "confidence":      rule.get("confidence"),
-                })
-                uploaded += 1
-            except Exception as e:
-                print(f"  [DB] Failed to insert {rule.get('rule_id')}: {e}")
-                skipped += 1
-
-    print(f"  [DB] Uploaded {uploaded} rules, skipped {skipped}.")
+        result = manager.store_extracted_rules(rules)
+        print(f"  [DB] Uploaded {result['uploaded']} rules, skipped {result['skipped']}.")
+    finally:
+        manager.close()
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -554,10 +514,9 @@ def main() -> None:
     )
     print(f"\nSaved to {OUTPUT_JSON}")
 
-    db_url = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/db")
-    print(f"\nStep 4: Uploading rules to database ({db_url})...")
+    print("\nStep 4: Uploading rules to database via DBManager...")
     try:
-        upload_rules_to_db(final, db_url=db_url)
+        upload_rules_to_db(final)
     except Exception as e:
         print(f"  [DB] Upload failed: {e}")
 

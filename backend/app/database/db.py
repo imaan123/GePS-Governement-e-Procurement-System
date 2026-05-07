@@ -1,4 +1,5 @@
 import json
+import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from models.rule_schema import Rule
@@ -6,7 +7,7 @@ from models.bidder_schema import BidderField
 from models.evaluation_schema import EvaluationResult, EvaluationSummary
 
 
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/db"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/db")
 
 engine = create_engine(DATABASE_URL)
 
@@ -109,6 +110,7 @@ class DBManager:
                 source_section,
                 confidence
             FROM rules
+            WHERE LOWER(COALESCE(category, '')) IN ('mandatory', 'optional')
             ORDER BY priority ASC
         """)
 
@@ -289,6 +291,104 @@ class DBManager:
     # -----------------------------
     def close(self):
         self.session.close()
+
+    # -----------------------------
+    # STORE RULE(S) FROM EXTRACTION
+    # -----------------------------
+    def store_extracted_rule(self, rule_id: str, rule_definition: dict, original_text: str = None,
+                             rule_type: str = "EXTRACTED", category: str = "tender",
+                             priority: int = 100, dependencies=None, source_page: int = None,
+                             source_section: str = None, confidence: float = None):
+
+        query = text("""
+            INSERT INTO rules (
+                rule_id, rule_type, category, priority, dependencies,
+                rule_definition, original_text, source_page, source_section, confidence
+            ) VALUES (
+                :rule_id, :rule_type, :category, :priority, :dependencies,
+                :rule_definition, :original_text, :source_page, :source_section, :confidence
+            )
+            ON CONFLICT (rule_id) DO UPDATE SET
+                rule_type = EXCLUDED.rule_type,
+                category = EXCLUDED.category,
+                priority = EXCLUDED.priority,
+                dependencies = EXCLUDED.dependencies,
+                rule_definition = EXCLUDED.rule_definition,
+                original_text = EXCLUDED.original_text,
+                source_page = EXCLUDED.source_page,
+                source_section = EXCLUDED.source_section,
+                confidence = EXCLUDED.confidence
+        """)
+
+        self.session.execute(
+            query,
+            {
+                "rule_id": rule_id,
+                "rule_type": rule_type,
+                "category": category,
+                "priority": priority,
+                "dependencies": json.dumps(dependencies) if dependencies is not None else None,
+                "rule_definition": json.dumps(rule_definition) if rule_definition is not None else None,
+                "original_text": original_text,
+                "source_page": source_page,
+                "source_section": source_section,
+                "confidence": confidence,
+            },
+        )
+        self.session.commit()
+
+    def store_extracted_rules(self, rules: list):
+        """Bulk store a list of extracted rule dicts into the `rules` table.
+
+        Each rule dict should contain keys matching upload_rules_to_db's expectations
+        (rule_id, rule_type, category, priority, dependencies, rule_definition,
+        original_text, source_page, source_section, confidence).
+        """
+        insert_sql = text("""
+            INSERT INTO rules (
+                rule_id, rule_type, category, priority,
+                dependencies, rule_definition, original_text,
+                source_page, source_section, confidence
+            ) VALUES (
+                :rule_id, :rule_type, :category, :priority,
+                :dependencies, :rule_definition, :original_text,
+                :source_page, :source_section, :confidence
+            )
+            ON CONFLICT (rule_id) DO UPDATE SET
+                rule_type       = EXCLUDED.rule_type,
+                category        = EXCLUDED.category,
+                priority        = EXCLUDED.priority,
+                dependencies    = EXCLUDED.dependencies,
+                rule_definition = EXCLUDED.rule_definition,
+                original_text   = EXCLUDED.original_text,
+                source_page     = EXCLUDED.source_page,
+                source_section  = EXCLUDED.source_section,
+                confidence      = EXCLUDED.confidence
+        """)
+
+        uploaded = 0
+        skipped = 0
+
+        for rule in rules:
+            try:
+                self.session.execute(insert_sql, {
+                    "rule_id": rule.get("rule_id"),
+                    "rule_type": rule.get("rule_type"),
+                    "category": rule.get("category"),
+                    "priority": rule.get("priority"),
+                    "dependencies": json.dumps(rule.get("dependencies")) if rule.get("dependencies") is not None else None,
+                    "rule_definition": json.dumps(rule.get("rule_definition")),
+                    "original_text": rule.get("original_text"),
+                    "source_page": rule.get("source_page"),
+                    "source_section": rule.get("source_section"),
+                    "confidence": rule.get("confidence"),
+                })
+                uploaded += 1
+            except Exception:
+                skipped += 1
+
+        self.session.commit()
+        return {"uploaded": uploaded, "skipped": skipped}
 
 # def store_results(bidder_id, results):
 
