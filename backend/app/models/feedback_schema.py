@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from dataclasses import dataclass
 
-class FeedbackSchema(BaseModel):
+@dataclass
+class FeedbackSchema():
     user: str = ""
     comment: str = ""
     rating: int = 0
