@@ -454,7 +454,7 @@ Extract the following information from the bidder document and return it as a JS
     "source_section": "[SECTION_NAME_OR_NULL]",
     "original_text": "[ORIGINAL_TEXT_SNIPPET]",
     "confidence": [CONFIDENCE_SCORE_0_TO_1]
-"""}}
+}}
 
 INSTRUCTIONS:
 1. Extract the most relevant value for "{field_name}" from the document text
