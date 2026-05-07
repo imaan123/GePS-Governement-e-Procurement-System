@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from services.rule_engine.rule_engine_core import evaluate_bidder
 from services.rule_engine.bidder_lookup import build_bidder_lookup
 from database.db import DBManager, init_tables
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 db = DBManager()
@@ -11,6 +12,14 @@ db = DBManager()
 def startup_event():
     """Initialize database tables on startup"""
     init_tables()
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:3000"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 @app.get("/health")
 def health_check():
